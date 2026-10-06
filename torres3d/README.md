@@ -27,7 +27,7 @@ Parâmetros de URL:
 - `?q=alta|media|baixa`: resolução da malha do oceano e número de partículas. O padrão é `media` em celulares.
 - `?cam=Guarita`: abre direto numa câmera pré-definida.
 
-Para publicar de graça, use o GitHub Pages: em Settings → Pages, escolha a branch e a pasta `/ (root)`. O app fica em `https://<usuario>.github.io/<repositorio>/torres3d/`. Como o repositório é público no Pages, isso também serve de demonstração. Outras opções de hospedagem estática: Netlify e Cloudflare Pages.
+Para publicar de graça, use o GitHub Pages: em Settings → Pages, escolha a branch e a pasta `/ (root)`. O app fica em `https://<usuario>.github.io/<repositorio>/torres3d/`. O site publicado fica público, o que já serve de link de demonstração (em conta gratuita, o Pages exige repositório público). Outras opções de hospedagem estática: Netlify e Cloudflare Pages.
 
 ### Relevo real
 
