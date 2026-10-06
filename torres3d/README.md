@@ -29,16 +29,17 @@ Parâmetros de URL:
 
 Para publicar de graça, use o GitHub Pages: em Settings → Pages, escolha a branch e a pasta `/ (root)`. O app fica em `https://<usuario>.github.io/<repositorio>/torres3d/`. O site publicado fica público, o que já serve de link de demonstração (em conta gratuita, o Pages exige repositório público). Outras opções de hospedagem estática: Netlify e Cloudflare Pages.
 
-### Relevo real
+### Relevo
 
-Na primeira execução, o navegador tenta baixar o Copernicus DEM (90 m) pela API de elevação da Open-Meteo e guarda o resultado em cache local. Se não conseguir, usa um relevo procedural aproximado, montado a partir dos morros e praias listados em `js/geo.js`.
+O relevo já vem no repositório: `data/terrain.json`, gerado a partir do Copernicus DEM GLO-30 (30 m), em grade de 25 m. Sem esse arquivo, o app tenta baixar o DEM de 90 m pela Open-Meteo e, se não conseguir, usa um relevo procedural aproximado.
 
-Para fixar o relevo no repositório, ou usar um MDT melhor (Copernicus 30 m, LiDAR, drone):
+Para regenerar o relevo ou usar um MDT melhor (LiDAR, drone):
 
 ```bash
-pip install numpy                     # rasterio e pyproj só para --geotiff
-python tools/build_terrain.py         # Copernicus DEM via Open-Meteo -> data/terrain.json
+pip install numpy rasterio pyproj
+python tools/build_terrain.py                              # Copernicus 30 m (AWS Open Data)
 python tools/build_terrain.py --geotiff mdt_torres.tif --dx 10
+python tools/build_terrain.py --source openmeteo --dx 75   # sem rasterio; lento (limite da API gratuita)
 ```
 
 ## Como funciona
@@ -64,7 +65,8 @@ Escolhas e limitações, para deixar claro em qualquer apresentação:
 2. A batimetria é sintética: um perfil de equilíbrio de Dean com A = 0,10 m^1/3. Ela deve ser substituída por GEBCO, cartas náuticas da DHN ou levantamento batimétrico. É o fator que mais limita a precisão perto da costa.
 3. A refração assume isóbatas paralelas e localmente retas. Não há difração atrás dos promontórios nem da Ilha dos Lobos, nem correntes de retorno. Isso exige um modelo espectral costeiro (SWAN) ou de fase resolvida (SWASH, FUNWAVE). Ver o roadmap.
 4. O vento vem da interpolação de um modelo global (resolução de ~10 km). O efeito do relevo é só cinemático.
-5. As posições dos morros e praias em `js/geo.js` são aproximadas e devem ser conferidas com ortofoto.
+5. Os morros e a barra do Mampituba foram posicionados a partir do DEM. Os nomes das praias e a Ilha dos Lobos (ausente no DEM e inserida como feição simplificada) têm posição aproximada.
+6. O Copernicus DEM é um modelo de superfície (DSM): prédios e vegetação aparecem como relevo.
 
 ## Estrutura
 
@@ -99,7 +101,7 @@ O código está sob licença MIT (ver `LICENSE` na raiz do repositório). Os dad
 | Fonte | Uso | Licença / custo |
 |---|---|---|
 | [Open-Meteo](https://open-meteo.com) (Marine, Forecast, Elevation) | Ondas, nível do mar, vento, MDT | CC BY 4.0. Gratuita para uso não comercial; uso comercial requer plano pago |
-| Copernicus DEM GLO-90 | Relevo | Licença Copernicus, livre com atribuição |
+| Copernicus DEM GLO-30 / GLO-90 (© DLR e Airbus, Copernicus) | Relevo | Licença Copernicus DEM, livre com atribuição |
 | [three.js](https://threejs.org) | Motor 3D | MIT |
 
 Nesta fase o projeto não tem custo. Para comercializar: assinar o plano comercial da Open-Meteo ou montar o pipeline próprio da fase 4 (os dados NOAA, ECMWF Open Data e Copernicus Marine são gratuitos, mas exigem um servidor de ~US$ 50–300/mês).

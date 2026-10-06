@@ -56,26 +56,26 @@ export function bearingToCoastVec(bearingTo) {
   return enToCoast(e, n);
 }
 
-// Landmarks. Positions are approximate and should be checked against a survey/orthophoto.
-// kind: 'headland' feeds the procedural terrain; 'beach' is label only.
+// Landmarks. Hill and river-mouth positions were checked against the Copernicus DEM 30 m
+// (peaks and the Mampituba channel); beach label positions and Ilha dos Lobos are approximate.
+// kind: 'headland' feeds the procedural fallback terrain; 'beach' is label only.
 export const LANDMARKS = [
-  { name: 'Barra do Mampituba (Molhes)', lat: -29.3225, lon: -49.7095, kind: 'river' },
-  { name: 'Praia dos Molhes', lat: -29.3285, lon: -49.7140, kind: 'beach' },
-  { name: 'Morro do Farol', lat: -29.3350, lon: -49.7195, kind: 'headland', height: 48, protrusion: 170, width: 150 },
-  { name: 'Praia da Cal', lat: -29.3383, lon: -49.7212, kind: 'beach' },
-  { name: 'Morro das Furnas', lat: -29.3410, lon: -49.7232, kind: 'headland', height: 38, protrusion: 120, width: 110 },
-  { name: 'Praia Grande', lat: -29.3470, lon: -49.7270, kind: 'beach' },
-  { name: 'Guarita (Torre Sul)', lat: -29.3535, lon: -49.7315, kind: 'headland', height: 45, protrusion: 190, width: 170 },
-  { name: 'Praia da Guarita', lat: -29.3575, lon: -49.7345, kind: 'beach' },
-  { name: 'Praia de Itapeva', lat: -29.3700, lon: -49.7440, kind: 'beach' },
+  { name: 'Barra do Mampituba (Molhes)', lat: -29.3258, lon: -49.7160, kind: 'river' },
+  { name: 'Praia dos Molhes', lat: -29.3300, lon: -49.7165, kind: 'beach' },
+  { name: 'Morro do Farol', lat: -29.3400, lon: -49.7262, kind: 'headland', height: 34, protrusion: 150, width: 160 },
+  { name: 'Morro das Furnas', lat: -29.3452, lon: -49.7290, kind: 'headland', height: 48, protrusion: 140, width: 150 },
+  { name: 'Praia Grande', lat: -29.3495, lon: -49.7310, kind: 'beach' },
+  { name: 'Guarita (Torre Sul)', lat: -29.3540, lon: -49.7315, kind: 'headland', height: 40, protrusion: 190, width: 180 },
+  { name: 'Praia de Itapeva', lat: -29.3680, lon: -49.7445, kind: 'beach' },
   { name: 'Ilha dos Lobos', lat: -29.3445, lon: -49.7010, kind: 'island' },
 ];
 
 // Camera presets: target and camera position in coast frame (x, y, height)
 export const CAMERA_PRESETS = {
-  'Vista geral': { target: [600, 400, 0], eye: [4200, -2600, 1900] },
-  'Praia Grande': { target: [120, -150, 0], eye: [900, -900, 160] },
-  'Guarita': { target: [100, -850, 0], eye: [700, -1500, 140] },
-  'Molhes': { target: [150, 3150, 0], eye: [900, 2500, 170] },
+  'Vista geral': { target: [300, 0, 0], eye: [4200, -2800, 1900] },
+  'Praia Grande': { target: [-80, -420, 0], eye: [700, -1150, 160] },
+  'Farol e Furnas': { target: [-280, 380, 0], eye: [550, -250, 180] },
+  'Guarita': { target: [40, -900, 0], eye: [650, -1550, 140] },
+  'Molhes': { target: [-320, 2560, 0], eye: [450, 1900, 170] },
   'Ilha dos Lobos': { target: [1950, 1550, 0], eye: [2700, 900, 250] },
 };

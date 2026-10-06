@@ -4,13 +4,17 @@ The grid is defined in the viewer's coast-aligned frame (x seaward, y alongshore
 match js/geo.js (ORIGIN, COAST_BEARING, DOMAIN).
 
 Sources:
-  openmeteo  Copernicus DEM GLO-90 via the Open-Meteo Elevation API (default, no key needed)
-  geotiff    Any local DEM in a geographic or projected CRS (Copernicus GLO-30, LiDAR, drone
-             survey...). Requires rasterio and pyproj.
+  copernicus30  Copernicus DEM GLO-30 tile downloaded from the AWS Open Data registry
+                (default; this is how data/terrain.json was built). Requires rasterio, pyproj.
+  openmeteo     Copernicus DEM GLO-90 via the Open-Meteo Elevation API. No extra packages,
+                but slow: the free tier is rate limited (HTTP 429), so requests are paced.
+  geotiff       Any local DEM in a geographic or projected CRS (LiDAR, drone survey...).
+                Requires rasterio and pyproj.
 
 Examples:
-  python tools/build_terrain.py
-  python tools/build_terrain.py --dx 50
+  pip install numpy rasterio pyproj
+  python tools/build_terrain.py                      # Copernicus 30 m, dx = 25 m
+  python tools/build_terrain.py --source openmeteo --dx 75
   python tools/build_terrain.py --geotiff dem_torres.tif --dx 10
 """
 
@@ -18,6 +22,7 @@ import argparse
 import json
 import math
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -52,7 +57,31 @@ def grid_points(dx):
     return xs, ys, lon, lat
 
 
-def sample_openmeteo(lon, lat, chunk=100, pause=0.15):
+COP30_URL = (
+    "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_{ns}{lat:02d}_00_{ew}{lon:03d}_00_DEM/"
+    "Copernicus_DSM_COG_10_{ns}{lat:02d}_00_{ew}{lon:03d}_00_DEM.tif"
+)
+
+
+def download_copernicus30(lon, lat, cache_dir):
+    """Download the 1x1 degree GLO-30 tile covering the grid (the Torres domain fits in one)."""
+    lat_floor = math.floor(float(lat.min()))
+    lon_floor = math.floor(float(lon.min()))
+    if math.floor(float(lat.max())) != lat_floor or math.floor(float(lon.max())) != lon_floor:
+        raise SystemExit("Domain spans more than one Copernicus tile; merge tiles and use --geotiff")
+    url = COP30_URL.format(
+        ns="S" if lat_floor < 0 else "N", lat=abs(lat_floor),
+        ew="W" if lon_floor < 0 else "E", lon=abs(lon_floor),
+    )
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path = cache_dir / url.rsplit("/", 1)[1]
+    if not path.exists():
+        print(f"Downloading {url}")
+        urllib.request.urlretrieve(url, path)
+    return path
+
+
+def sample_openmeteo(lon, lat, chunk=100, pause=1.0):
     flat_lat, flat_lon = lat.ravel(), lon.ravel()
     out = np.empty(flat_lat.size)
     n_chunks = math.ceil(flat_lat.size / chunk)
@@ -64,16 +93,22 @@ def sample_openmeteo(lon, lat, chunk=100, pause=0.15):
             + "&longitude="
             + ",".join(f"{v:.5f}" for v in flat_lon[sl])
         )
-        for attempt in range(4):
+        for attempt in range(8):
             try:
                 with urllib.request.urlopen(url, timeout=30) as r:
                     vals = json.load(r)["elevation"]
                 break
-            except Exception as exc:  # network hiccup or rate limit
-                if attempt == 3:
+            except urllib.error.HTTPError as exc:
+                if exc.code != 429 or attempt == 7:
                     raise
-                time.sleep(2 ** (attempt + 1))
-                print(f"  retry {attempt + 1}: {exc}")
+                # free tier: each coordinate counts as a call (600/min); wait for the window to reset
+                print(f"\n  rate limited, waiting 65 s (attempt {attempt + 1})")
+                time.sleep(65)
+            except urllib.error.URLError as exc:
+                if attempt == 7:
+                    raise
+                time.sleep(2 ** min(attempt + 1, 5))
+                print(f"\n  retry {attempt + 1}: {exc}")
         out[sl] = [v if v is not None and np.isfinite(v) else 0.0 for v in vals]
         print(f"\r  {c + 1}/{n_chunks} requests", end="", flush=True)
         time.sleep(pause)
@@ -97,8 +132,10 @@ def sample_geotiff(path, lon, lat):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--dx", type=float, default=75.0, help="grid spacing in metres (default 75)")
-    ap.add_argument("--geotiff", type=Path, help="local DEM instead of the Open-Meteo API")
+    ap.add_argument("--source", choices=["copernicus30", "openmeteo"], default="copernicus30")
+    ap.add_argument("--dx", type=float, default=25.0, help="grid spacing in metres (default 25)")
+    ap.add_argument("--geotiff", type=Path, help="local DEM file (overrides --source)")
+    ap.add_argument("--cache", type=Path, default=Path(__file__).resolve().parent / "cache")
     ap.add_argument("--out", type=Path, default=OUT)
     args = ap.parse_args()
 
@@ -107,6 +144,9 @@ def main():
     if args.geotiff:
         elev = sample_geotiff(args.geotiff, lon, lat)
         source = f"DEM local ({args.geotiff.name})"
+    elif args.source == "copernicus30":
+        elev = sample_geotiff(download_copernicus30(lon, lat, args.cache), lon, lat)
+        source = "Copernicus DEM GLO-30"
     else:
         elev = sample_openmeteo(lon, lat)
         source = "Copernicus DEM GLO-90 (via Open-Meteo)"
